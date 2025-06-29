@@ -1,6 +1,7 @@
 from FlagEmbedding import BGEM3FlagModel 
 import numpy as np
 from sklearn.manifold import TSNE
+from sklearn.metrics.pairwise import cosine_similarity
 import matplotlib.pyplot as plt
 
 # Inizializza il modello
@@ -23,7 +24,7 @@ query = " Quale sport estivo mi consigli di provare?"
 embeddings = model.encode(sentences)['dense_vecs']
 
 # Calcola embedding per la query
-query_embedding = model.encode([query])['dense_vecs']
+query_embedding = model.encode([query])['dense_vecs'][0]
 
 # Combina tutti gli embeddings
 all_embeddings = np.vstack([embeddings, query_embedding])
@@ -39,46 +40,55 @@ loaded_embeddings = np.load('embeddings.npy')
 # ----------------------------
 
 # Normalizza embeddings
-embeddings_norm = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
-query_embedding_norm = query_embedding / np.linalg.norm(query_embedding)
+#embeddings_norm = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+#query_embedding_norm = query_embedding / np.linalg.norm(query_embedding)
 
 # Calcola cosine similarity
-cosine_similarities = embeddings_norm @ query_embedding_norm.T
-cosine_similarities = cosine_similarities.flatten()
+#osine_similarities = embeddings_norm @ query_embedding_norm.T
+#cosine_similarities = cosine_similarities.flatten()
 
 # Ordina i risultati in ordine decrescente
-sorted_indices = np.argsort(-cosine_similarities)
-sorted_similarities = cosine_similarities[sorted_indices]
-sorted_sentences = [sentences[i] for i in sorted_indices]
+#sorted_indices = np.argsort(-cosine_similarities)
+#sorted_similarities = cosine_similarities[sorted_indices]
+#sorted_sentences = [sentences[i] for i in sorted_indices]
+
+similarities = cosine_similarity([query_embedding], embeddings)[0]
+similarity_results = sorted(zip(sentences, similarities), key=lambda x: x[1], reverse=True)
+
 
 # Stampa risultati
 print("Similarità coseno della query rispetto a ciascuna frase:")
-for sent, score in zip(sorted_sentences, sorted_similarities):
-    print(f"{score:.4f} -> {sent}")
+#for sent, score in zip(sorted_sentences, sorted_similarities):
+#    print(f"{score:.4f} -> {sent}")
+
+for sent, similarity in similarity_results:
+    print(f"{similarity:.4f} -> {sent}")
 
 # Riduzione dimensionale con T-SNE
-tsne = TSNE(n_components=2, random_state=42, perplexity=3)
+tsne = TSNE(n_components=2, random_state=42, perplexity=2)
 embeddings_2d = tsne.fit_transform(loaded_embeddings)
 
 # Split embeddings 2D
-sentences_2d = embeddings_2d[:-1]         # tutte le frasi
-query_2d = embeddings_2d[-1]              # la query
+#sentences_2d = embeddings_2d[:-1]         # tutte le frasi
+#query_2d = embeddings_2d[-1]              # la query
 
 # Plot
 plt.figure(figsize=(8,6))
 
 # Plot frasi (punti blu)
-plt.scatter(sentences_2d[:,0], sentences_2d[:,1], color='blue', label='Sentences')
-
+#plt.scatter(sentences_2d[:,0], sentences_2d[:,1], color='blue', label='Sentences')
+plt.scatter(embeddings_2d[:-1, 0], embeddings_2d[:-1, 1], color='blue', label='Sentences')
 # Plot query (punto rosso)
-plt.scatter(query_2d[0], query_2d[1], color='red', s=100, label='Query')
+#plt.scatter(query_2d[0], query_2d[1], color='red', s=100, label='Query')
+plt.scatter(embeddings_2d[-1, 0], embeddings_2d[-1, 1], color='red', s=100, label='Query')
 
 # Aggiungi etichette alle frasi
 for i, sentence in enumerate(sentences):
-    plt.text(sentences_2d[i, 0] + 0.1, sentences_2d[i, 1] + 0.1, sentence, fontsize=9)
+    #plt.text(sentences_2d[i, 0] + 0.1, sentences_2d[i, 1] + 0.1, sentence, fontsize=9)
+     plt.text(embeddings_2d[i, 0] + 0.1, embeddings_2d[i, 1] + 0.1, sentence, fontsize=9)
 
 # Etichetta per la query
-plt.text(query_2d[0] + 0.1, query_2d[1] + 0.1, query, fontsize=10, color='red', fontweight='bold')
+plt.text(embeddings_2d[-1, 0] + 0.1, embeddings_2d[-1, 1] + 0.1, query, fontsize=10, color='red', fontweight='bold')
 
 plt.title("T-SNE Projection of Embeddings")
 plt.xlabel("Dimension 1")
